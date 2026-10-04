@@ -15,6 +15,10 @@ env/
 # Cached model responses
 .cache/
 
+# Local-only working notes and coaching playbook (not part of the submission)
+PROJECT_STATE.md
+.claude/skills/fitfindr-coach/
+
 # OS noise
 .DS_Store
 Thumbs.db
