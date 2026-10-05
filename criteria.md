@@ -69,7 +69,8 @@ the end of each try. A try passes when its session matches the path it took:
   and `received_ids` is empty.
 
 A try that crashes in a model call before returning a session is re-run and not
-counted. Target: 5 of 5 tries for each query.
+counted. A try is re-run at most twice; if all three attempts crash, it counts as
+a FAIL. Target: 5 of 5 tries for each query.
 
 **Why this target:**
 Steps 1 to 5 of my session flow are plain Python with no model call: the item is
@@ -124,19 +125,43 @@ otherwise replay the same caption, and the tries need to be real.
 
 ---
 
-## 5. Your choice
+## 5. The empty-search message names what blocked the search and how to fix it
 
-<!-- YOU WRITE THIS ONE TOO.
+Run each of these five impossible queries once; the parts that block each one
+are in brackets:
 
-     Pick something you actually care about getting right. Speed, the empty
-     wardrobe path, what happens when the model can't be reached, whether the
-     search respects a price ceiling — anything, as long as it names a number
-     or an observable outcome. -->
+1. `corduroy pants under $10` (price)
+2. `band tee size XS` (size)
+3. `sequin cocktail gown` (words)
+4. `platform sneakers size 9` (size; the words and the size each match
+   listings alone, but not together)
+5. `silk ballgown size XXL over $200` (price, size and words)
 
+A try passes when `session["error"]` does all three of these for every blocking
+part:
 
+- **names the part:** contains the word `price`, `size` or `words`;
+- **quotes the user's value:** e.g. `$10`, `XS`, `sequin cocktail gown`;
+- **gives a fix from the data:** for price, the lowest price (for an upper
+  limit) or the highest price (for a lower limit) among listings that match the
+  rest of the query, or among all listings if none do; for size, at least one
+  size that exists among listings that match the rest of the query, or among
+  all listings if none do; for words, at least one category name (`tops`,
+  `bottoms`, `outerwear`, `shoes`, `accessories`).
+
+Target: 5 of 5.
 
 **Why this target:**
-
+In my build, the message is built from checks on the query and the data, not by
+the model, so the same query gives the same message on every try; a miss would
+mean a kind of impossible query my checks don't handle, and it would miss every
+time, so 5 of 5 is the target. The five queries are one of each kind I found,
+including a combination where each part matches alone and a layered failure
+where three parts block the search at once, so the message has to find every
+blocking part, not just the first. Naming the part, quoting the value and giving
+a fix from the data are different issues with one purpose: the user should know
+exactly what to change. I wrote these five queries after testing other queries
+in M2 and M3, so the target is not fitted to queries I had already checked.
 
 
 ---
