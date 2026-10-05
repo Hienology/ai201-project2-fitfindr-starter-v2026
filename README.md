@@ -81,7 +81,7 @@
 
 ### `suggest_outfit`
 
-- **What it does:** Asks the model, through `generate()` with fixed rules passed as `system=`, for one or two outfits built around the found item. The prompt gives the item's title, category, colors, style tags, condition and price, and its brand only when it is not `None`. If the wardrobe has items, the prompt lists each item's name, category and colors, and the rules require every outfit to use the new item plus pieces from the wardrobe, named exactly as written there (e.g. `Chunky white sneakers`). If the wardrobe is empty, the rules ask instead for general styling advice for the item: the kinds of pieces, colors and occasions that suit it.
+- **What it does:** Asks the model, through `generate()` with fixed rules passed as `system=`, for one or two outfits built around the found item. The prompt gives the item's title, category, colors, style tags, condition and price, and its brand only when it is not `None`. If the wardrobe has items, the prompt lists each item's name, category and colors, and the rules require every outfit to use the new item plus pieces from the wardrobe, named word for word as written there; capital letters may differ (e.g. `Chunky white sneakers` may appear as "chunky white sneakers"). If the wardrobe is empty, the rules ask instead for general styling advice for the item: the kinds of pieces, colors and occasions that suit it.
 - **Inputs:**
   - `new_item` (`dict`): one listing dict as returned by `search_listings`, with the 11 fields listed above.
   - `wardrobe` (`dict`): `{"items": [...]}`, where each item is a dict with `id` (str), `name` (str), `category` (str), `colors` (list[str]), `style_tags` (list[str]) and `notes` (str). `items` may be an empty list.
@@ -158,18 +158,23 @@ $ python app.py ask '...'
 **The three tools, tested one at a time**
 
 ```
-$ python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
+$ python -c "from tools import search_listings; print([(x['id'], x['title'], x['price']) for x in search_listings('graphic tee', max_price=30)])"
+[('lst_006', 'Graphic Tee — 2003 Tour Bootleg Style', 24.0), ('lst_015', 'Vintage Graphic Hoodie — Faded Black', 26.0), ('lst_002', 'Y2K Baby Tee — Butterfly Print', 18.0), ('lst_033', 'Vintage Band Tee — Faded Grey', 19.0), ('lst_017', 'Mesh Long-Sleeve Top — Black', 15.0), ('lst_012', 'Oversized Crewneck Sweatshirt — Vintage Navy', 20.0)]
 
+$ python -c "from tools import search_listings; r = search_listings('designer ballgown', size='XXS', max_price=5); print(type(r).__name__, r)"
+list []
 ```
 
 ```
-$ python -c "from tools import suggest_outfit; ..."
+$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[1], get_example_wardrobe()))"
+For a casual look, pair the Y2K Baby Tee — Butterfly Print with the baggy straight-leg jeans, dark wash and the chunky white sneakers. Add the black crossbody bag to complete the outfit.
 
+For a slightly edgy vibe, wear the Y2K Baby Tee — Butterfly Print under the oversized grey crewneck sweatshirt with the wide-leg khaki trousers and the black combat boots.
 ```
 
 ```
-$ python -c "from tools import create_fit_card; ..."
-
+$ AI201_CACHE=0 python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('Pair it with baggy straight-leg jeans, dark wash and chunky white sneakers.', load_listings()[1]))"
+Scored this gorgeous Y2K Baby Tee on depop for only $18. The white, pink, and purple butterfly print gives off such a nostalgic vibe when paired with baggy dark wash straight-leg jeans and chunky white sneakers. I am obsessed with how it blends that early 2000s energy with a touch of vintage charm.
 ```
 
 ---

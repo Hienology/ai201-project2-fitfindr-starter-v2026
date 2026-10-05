@@ -10,8 +10,7 @@ can't tell which layer is lying to you.
     suggest_outfit(new_item, wardrobe)             → str
     create_fit_card(outfit, new_item)              → str
 
-All three are stubs right now. They run and they do nothing — that's the
-starting position and it's deliberate.
+All three are built to the specs in the README's Tool Inventory.
 
 ⚠️ Before you write any of them, fill in the **Tool Inventory** section of your
 README (Milestone 2). Four lines per tool: what it does, each input with its
@@ -24,7 +23,7 @@ import re
 from fractions import Fraction
 
 import config
-from generate import generate
+from generate import ModelUnavailable, generate
 from utils.data_loader import load_listings
 
 
@@ -211,75 +210,174 @@ def search_listings(
     return [listing for *_, listing in kept[: config.SEARCH_RESULT_LIMIT]]
 
 
+# ── Helpers shared by the two model tools ─────────────────────────────────────
+
+def _short_title(item: dict) -> str:
+    """The title before the dash: "Y2K Baby Tee — Butterfly Print" gives "Y2K Baby Tee"."""
+    return item["title"].split(" — ")[0]
+
+
+def _price(item: dict) -> str:
+    """Whole dollars: 38.0 gives "$38" (a plain f-string would print "$38.0")."""
+    return f"${item['price']:g}"
+
+
+def _item_details(item: dict) -> str:
+    """The item as prompt lines. Brand appears only when the listing has one."""
+    lines = [
+        f"Item: {item['title']}",
+        f"Category: {item['category']}",
+        f"Colors: {', '.join(item['colors'])}",
+        f"Style tags: {', '.join(item['style_tags'])}",
+        f"Condition: {item['condition']}",
+        f"Price: {_price(item)}",
+    ]
+    if item["brand"] is not None:
+        lines.append(f"Brand: {item['brand']}")
+    return "\n".join(lines)
+
+
+def _generate_with_retry(prompt: str, system: str) -> str:
+    """
+    One retry when the model can't be reached. If the retry also fails, or
+    generate() raises anything else (still rate limited, call budget used up),
+    the error passes through to the caller.
+    """
+    try:
+        return generate(prompt, system=system)
+    except ModelUnavailable:
+        return generate(prompt, system=system)
+
+
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
+
+OUTFIT_RULES = """You suggest outfits for an item someone found second-hand.
+Rules:
+1. Suggest one or two outfits. Each outfit is one or two sentences.
+2. Every outfit uses the new item plus pieces from the wardrobe list, and only those.
+3. Name each wardrobe piece exactly as it is written in the list, word for word.
+4. Refer to the new item by its name.
+5. Do not mention a brand unless one is given.
+6. Write plain text: no headings, no bullet points, no markdown."""
+
+GENERAL_ADVICE_RULES = """You give styling advice for an item someone found second-hand.
+The person has no saved wardrobe.
+Rules:
+1. Write two to four sentences of general advice: the kinds of pieces, colors and occasions that suit the item.
+2. Refer to the item by its name.
+3. Do not mention a brand unless one is given.
+4. Write plain text: no headings, no bullet points, no markdown."""
+
 
 def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     """
-    Given a thrifted item and the user's wardrobe, suggest one or two outfits.
+    Suggest one or two outfits for the found item, built from the user's
+    wardrobe. Full spec: README, Tool Inventory.
 
-    This one calls the model, through `generate()`. You don't need to think
-    about rate limits — the adapter handles pacing for you.
+    With wardrobe items, the model must use the new item plus wardrobe pieces
+    named word for word as written (capital letters may differ). With an empty
+    wardrobe, it gives two to four sentences of general styling advice instead.
 
     Args:
-        new_item: a listing dict — the item the user is considering.
-        wardrobe: a wardrobe dict with an 'items' key holding a list of items.
-                  **It may be empty.** Handle that.
+        new_item: a listing dict as returned by search_listings.
+        wardrobe: {"items": [...]}, each item with id, name, category, colors,
+                  style_tags and notes. "items" may be empty.
 
     Returns:
-        A non-empty string with outfit suggestions.
-        With an empty wardrobe, return general styling advice rather than
-        raising or returning "". Unit 4 has you trigger the empty wardrobe on
-        purpose, so decide now what it should do.
+        A non-empty string of plain text. If the model replies with nothing,
+        a fixed fallback: "Style the <title before the dash> with simple
+        basics in <first color> or neutral tones." If the model can't be
+        reached, one retry, then the error passes through.
 
-    TODO:
-        1. Check whether wardrobe['items'] is empty.
-        2. If it is, ask the model for general styling ideas for this item.
-        3. If it isn't, format the wardrobe items into the prompt and ask for
-           specific combinations naming pieces the user already owns.
-        4. Return the model's response.
-
-    Test it from a terminal before you move on:
-        python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
+    Test it from a terminal:
+        python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[1], get_example_wardrobe()))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    if wardrobe["items"]:
+        pieces = "\n".join(
+            f"- {piece['name']} ({piece['category']}; {', '.join(piece['colors'])})"
+            for piece in wardrobe["items"]
+        )
+        prompt = f"{_item_details(new_item)}\n\nWardrobe:\n{pieces}"
+        text = _generate_with_retry(prompt, OUTFIT_RULES)
+    else:
+        text = _generate_with_retry(_item_details(new_item), GENERAL_ADVICE_RULES)
+
+    if not text.strip():
+        return f"Style the {_short_title(new_item)} with simple basics in {new_item['colors'][0]} or neutral tones."
+    return text
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
 
+FIT_CARD_RULES = """You write a short caption someone would post about a second-hand find.
+Rules:
+1. Write two to four sentences that read like a social media post, not a product description.
+2. Mention the item exactly once, using the name given. The item word given below may appear only inside that name: do not use it anywhere else, not even inside a style tag; drop it from any tag that contains it.
+3. Write the price exactly once, exactly as given (for example $38).
+4. Name the platform exactly once, exactly as given.
+5. Describe the vibe specifically, using the outfit and the item's style tags.
+6. Do not mention any brand unless one is given.
+7. Plain text only: no hashtags, no emoji, no markdown."""
+
+
+def _brands_in_data() -> list[str]:
+    """Every brand name that appears in the listings."""
+    return sorted({listing["brand"] for listing in load_listings() if listing["brand"]})
+
+
+def _names_other_brand(caption: str, item: dict) -> bool:
+    """True when the caption names a brand from the data other than the item's own."""
+    text = caption.lower().replace("’", "'")
+    return any(
+        re.search(rf"(?<![a-z]){re.escape(brand.lower())}(?![a-z])", text)
+        for brand in _brands_in_data()
+        if brand != item["brand"]
+    )
+
+
 def create_fit_card(outfit: str, new_item: dict) -> str:
     """
-    Write a short caption someone would actually post about the find.
+    Write a caption someone would post about the find. Full spec: README,
+    Tool Inventory.
 
-    This calls the model too.
+    The model is told to write two to four sentences that read like a post,
+    mention the item, its price (as whole dollars, e.g. "$38") and its platform
+    exactly once each, describe the vibe from the outfit and the style tags,
+    and name no brand unless the listing has one.
 
     Args:
-        outfit:   the outfit suggestion string from suggest_outfit().
-        new_item: the listing dict for the item.
+        outfit:   the outfit text suggest_outfit() returned.
+        new_item: the same listing dict that went into suggest_outfit().
 
     Returns:
-        A two-to-four sentence caption.
-        If `outfit` is empty or whitespace, return a descriptive message rather
-        than raising.
+        A caption string. If `outfit` is empty or only whitespace, returns
+        "Can't write a fit card: there is no outfit suggestion to describe."
+        without calling the model. If the model replies with nothing, or its
+        caption names a brand from the data other than the item's own, returns
+        the fallback "Thrifted the <title before the dash> for $<price> on
+        <platform>. Simple basics, easy outfit." If the model can't be reached,
+        one retry, then the error passes through.
 
-    The caption should read like a real post rather than a product description,
-    mention the item and its price and platform once each, and be specific about
-    the vibe.
+    Identical captions on repeated runs usually mean the response cache is on
+    (config.CACHE_ENABLED); set AI201_CACHE=0 to get fresh answers.
 
-    It should also come out **differently for different inputs**. If you run
-    this three times on the same item and get three word-for-word identical
-    strings, it's one of two things, and both are near the top of `config.py`:
-
-        • CACHE_ENABLED — the adapter handed back an answer it already had
-        • TEMPERATURE   — at 0.0 the model gives the same words every time
-
-    TODO:
-        1. Guard against an empty or whitespace-only `outfit`.
-        2. Build a prompt with the item details and the outfit.
-        3. Call generate() and return the response.
-
-    Test it from a terminal before you move on:
-        python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
+    Test it from a terminal:
+        python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('Pair it with baggy straight-leg jeans and chunky white sneakers.', load_listings()[1]))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    if not outfit.strip():
+        return "Can't write a fit card: there is no outfit suggestion to describe."
+
+    fallback = (f"Thrifted the {_short_title(new_item)} for {_price(new_item)} on "
+                f"{new_item['platform']}. Simple basics, easy outfit.")
+    prompt = (
+        f"{_item_details(new_item)}\n"
+        f"Platform: {new_item['platform']}\n\n"
+        f"Name to use for the item: {_short_title(new_item)}\n"
+        f"Item word (only inside the name): {_short_title(new_item).split()[-1].lower()}\n"
+        f"Price to write: {_price(new_item)}\n\n"
+        f"Outfit:\n{outfit}"
+    )
+    caption = _generate_with_retry(prompt, FIT_CARD_RULES)
+    if not caption.strip() or _names_other_brand(caption, new_item):
+        return fallback
+    return caption
