@@ -180,6 +180,25 @@ def search_listings(
     Test it from a terminal:
         python -c "from tools import search_listings; print([(x['id'], x['title'], x['price']) for x in search_listings('graphic tee', max_price=30)])"
     """
+    return all_matches(description, size, max_price, min_price, style_tags,
+                       colors, category, condition)[: config.SEARCH_RESULT_LIMIT]
+
+
+def all_matches(
+    description: str,
+    size: str | list[str] | None = None,
+    max_price: float | None = None,
+    min_price: float | None = None,
+    style_tags: str | list[str] | None = None,
+    colors: str | list[str] | None = None,
+    category: str | list[str] | None = None,
+    condition: str | list[str] | None = None,
+) -> list[dict]:
+    """
+    Every listing search_listings would accept, in the same order, with no
+    limit on how many. search_listings returns the first SEARCH_RESULT_LIMIT of
+    these; the empty-search message uses the full list to find fixes.
+    """
     # The request as terms: (words, came from description?). A multi-word style
     # tag or color, such as "dark blue", is one phrase term.
     terms = [([w], True) for w in _words(description) if w not in FILLER_WORDS]
@@ -207,7 +226,7 @@ def search_listings(
             kept.append((-score, listing["price"], position, listing))
 
     kept.sort(key=lambda entry: entry[:3])
-    return [listing for *_, listing in kept[: config.SEARCH_RESULT_LIMIT]]
+    return [listing for *_, listing in kept]
 
 
 # ── Helpers shared by the two model tools ─────────────────────────────────────

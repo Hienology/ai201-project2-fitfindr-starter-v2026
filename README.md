@@ -151,8 +151,17 @@ Steps 1 to 5 are deterministic (no randomness and no model call), so they produc
 **One full query**
 
 ```
-$ python app.py ask '...'
+$ python app.py ask 'vintage graphic tee under $30'
 
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+  Outfit:   For a casual look, pair the Y2K Baby Tee — Butterfly Print with the baggy straight-leg jeans, dark wash and the chunky white sneakers. Add the black crossbody bag to complete the outfit.
+
+For a slightly edgy vibe, wear the Y2K Baby Tee — Butterfly Print under the oversized grey crewneck sweatshirt with the wide-leg khaki trousers and the black combat boots.
+
+  Fit card: Scored this cute Y2K Baby Tee on depop for only $18. Styled it for a casual look with baggy straight-leg jeans, dark wash and chunky white sneakers, finishing the outfit with a black crossbody bag. Such a nostalgic y2k vintage piece to add to the rotation.
+
+0 model calls this session, 2 served from cache
 ```
 
 **The three tools, tested one at a time**
