@@ -18,7 +18,8 @@ from collections import Counter
 
 import config
 import trace
-from tools import search_listings, suggest_outfit, create_fit_card
+from tools import suggest_outfit, create_fit_card
+from mcp_client import call_tool   # search_listings is reached through MCP (mcp_server.py)
 # Matching helpers shared with search_listings, so the parse and the search agree.
 from tools import CATEGORY_MAP, FILLER_WORDS, _items, _same, _size_pieces, _words, all_matches
 from generate import ModelUnavailable
@@ -251,11 +252,11 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     session = new_session(query, wardrobe)
     count = 0
 
-    # Steps 2-3: parse, then search.
+    # Steps 2-3: parse, then search through the MCP server.
     count += 1
     trace.check_iterations(count)
     session["parsed"] = parse_query(session["query"])
-    session["search_results"] = search_listings(**session["parsed"])
+    session["search_results"] = call_tool("search_listings", session["parsed"])
 
     # Step 4, the branch: nothing found means stop here, with a message.
     if not session["search_results"]:

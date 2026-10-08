@@ -59,7 +59,7 @@ works with a direct call, and **a documented failure earns the point in full.**
 
 from mcp.server.fastmcp import FastMCP
 
-from tools import search_listings as _search_listings_impl  # noqa: F401 — you'll use this below
+from tools import search_listings as _search_listings_impl
 
 # log_level="WARNING" keeps the server from printing an INFO line for every
 # request. Without it your terminal fills with "Processing request of type
@@ -67,23 +67,32 @@ from tools import search_listings as _search_listings_impl  # noqa: F401 — you
 mcp = FastMCP("fitfindr", log_level="WARNING")
 
 
-# ── TODO: uncomment and fill this in ──────────────────────────────────────────
-#
-# @mcp.tool()
-# def search_listings(
-#     description: str,
-#     size: str | None = None,
-#     max_price: float | None = None,
-# ) -> list[dict]:
-#     """
-#     <-- YOUR DESCRIPTION GOES HERE.
-#
-#         One or two sentences. What does this tool do, what does it need, and
-#         what does it give back when it finds nothing? Written for a reader
-#         who cannot see the code.
-#     """
-#     return _search_listings_impl(description, size, max_price)
-#
+# ── The one tool this server offers ───────────────────────────────────────────
+
+@mcp.tool()
+def search_listings(
+    description: str,
+    size: str | list[str] | None = None,
+    max_price: float | None = None,
+    min_price: float | None = None,
+    style_tags: str | list[str] | None = None,
+    colors: str | list[str] | None = None,
+    category: str | list[str] | None = None,
+    condition: str | list[str] | None = None,
+) -> list[dict]:
+    """
+    Searches 40 second-hand clothing listings for the best matches to a request
+    and returns up to 10 listing dicts, best match first (fields: id, title,
+    description, category, style_tags, size, condition, price in US dollars,
+    colors, brand or null, platform). max_price and min_price are inclusive
+    limits in US dollars; a size matches when every piece of a requested size
+    such as "US 8" or "S/M" is in the listing's size; string inputs may list
+    several values separated by commas or "or"; when nothing passes it returns
+    an empty list, never null or an error.
+    """
+    return _search_listings_impl(description, size, max_price, min_price,
+                                 style_tags, colors, category, condition)
+
 # ──────────────────────────────────────────────────────────────────────────────
 #
 # Two notes on the block above.

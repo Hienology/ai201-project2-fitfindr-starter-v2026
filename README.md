@@ -138,7 +138,7 @@ change it.
 
 1. `query`: the user's text, set by `new_session`, which also starts `received_ids` as `{}`.
 2. `parsed`: the 8 inputs above, as a dict.
-3. `search_results`: everything `search_listings(**session["parsed"])` returned.
+3. `search_results`: everything `search_listings` returned, called through the MCP server as `call_tool("search_listings", session["parsed"])` (`mcp_server.py`, via `mcp_client.py`). The empty-search message's own checks call `tools.all_matches` directly.
 4. The branch: if `session["search_results"]` is empty, `error` is set and the session is returned.
 5. `selected_item`: `session["search_results"][0]`.
 6. `outfit_suggestion`: `suggest_outfit(session["selected_item"], session["wardrobe"])`; the loop records the `id` it passed in `session["received_ids"]["suggest_outfit"]`.
@@ -324,6 +324,15 @@ that produced it:
 behaved differently afterwards. If the rewire didn't work, say exactly where it
 broke — the error text and the last thing that worked. That earns the point in
 full. -->
+`search_listings` is registered in `mcp_server.py` with the same 8 typed inputs
+as the Tool Inventory, and `run_agent` now calls it with
+`call_tool("search_listings", session["parsed"])` instead of calling the
+function directly; `suggest_outfit` and `create_fit_card` are still direct
+calls. Nothing behaved differently: on 25 queries the MCP results were identical
+to the direct call (same listings, same order, still a list, `price` still a
+float, `brand` still `None` where empty), and an empty search still comes back
+as `[]`, so the branch works unchanged. The empty-search message's own checks
+still call `tools.all_matches` directly, not through MCP.
 
 
 
