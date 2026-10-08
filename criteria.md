@@ -83,6 +83,19 @@ model's text, keeps this criterion about state and not about what the model
 writes. A try that crashes is re-run because my safety nets (fallback text and
 one retry) exist to keep the run going, and a crash says nothing about state.
 
+> **Revised in unit 4:** A try that crashes in a model call, or that ends with
+> the model-unavailable message added in unit 4 (`session["error"]` starting
+> "Your issue is at the styling model"), is re-run and not counted, at most
+> twice; if all three attempts end that way, it counts as a FAIL. Everything
+> else in this criterion is unchanged, including the target.
+>
+> **Why revised:** in unit 4 Milestone 2, `run_agent` gained a handler, so a
+> model that can't be reached no longer crashes the run; it returns a session
+> with that message in `error`. The original word "crashes" would no longer
+> catch this event, and on the found path the message in `error` would make the
+> try look like a state failure. It is the same event the original excluded,
+> only its shape changed, so this keeps the criterion measuring state.
+
 
 
 ---
@@ -121,6 +134,20 @@ in the data. What is left is whether my prompt rules make the model obey the
 caption rules every time; a rounded price, a repeated item word or a one-line
 caption is a real miss. The cache is off because identical prompts would
 otherwise replay the same caption, and the tries need to be real.
+
+> **Revised in unit 4:** A try whose fit card is the fallback caption, that
+> crashes in a model call, or that ends with the model-unavailable message added
+> in unit 4 (`session["error"]` starting "Your issue is at the styling model"),
+> is re-run and not counted, at most twice; if all three attempts end that way,
+> it counts as a FAIL. Everything else in this criterion is unchanged, including
+> the target.
+>
+> **Why revised:** in unit 4 Milestone 2, `run_agent` gained a handler, so a
+> model that can't be reached no longer crashes the run; it returns a session
+> with that message in `error` and no fit card. The original word "crashes"
+> would no longer catch this event. It is the same event the original excluded,
+> only its shape changed, so this keeps the criterion measuring the model's
+> captions.
 
 
 ---
