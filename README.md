@@ -41,6 +41,15 @@
 
 <!-- Three or four sentences: what a user asks for, and what they get back. -->
 
+A user describes the second-hand item they want in plain words, such as
+`vintage graphic tee under $30`, and FitFindr searches the listings for the
+products that best suit that description, including its price, size, style and
+color. It takes the best match and creates a fashion recommendation: one or two
+outfits that pair the find with pieces from the user's own wardrobe, or general
+styling advice if the wardrobe is empty. It then writes a short caption the user
+could post about the find, with its price and platform. If nothing matches, it
+stops and tells the user which part of the query blocked the search and how to
+change it.
 
 
 ---
@@ -81,7 +90,7 @@
 
 ### `suggest_outfit`
 
-- **What it does:** Asks the model, through `generate()` with fixed rules passed as `system=`, for one or two outfits built around the found item. The prompt gives the item's title, category, colors, style tags, condition and price, and its brand only when it is not `None`. If the wardrobe has items, the prompt lists each item's name, category and colors, and the rules require every outfit to use the new item plus pieces from the wardrobe, named word for word as written there; capital letters may differ (e.g. `Chunky white sneakers` may appear as "chunky white sneakers"). If the wardrobe is empty, the rules ask instead for general styling advice for the item: the kinds of pieces, colors and occasions that suit it.
+- **What it does:** Asks the model, through `generate()` with fixed rules passed as `system=`, for one or two outfits built around the found item. The prompt gives the item's title, category, colors, style tags, condition and price, and its brand only when it is not `None`. If the wardrobe has items, the prompt lists each item's name, category and colors, and the rules require every outfit to use the new item plus pieces from the wardrobe, named word for word as written there; capital letters may differ (e.g. `Chunky white sneakers` may appear as "chunky white sneakers"). If the wardrobe is empty, the rules ask instead for general styling advice for the item: the kinds of pieces, colors and occasions that suit it. In both cases the rules also tell the model to refer to the item by its name, to mention no brand unless one is given, and to write plain text with no headings, bullet points or markdown.
 - **Inputs:**
   - `new_item` (`dict`): one listing dict as returned by `search_listings`, with the 11 fields listed above.
   - `wardrobe` (`dict`): `{"items": [...]}`, where each item is a dict with `id` (str), `name` (str), `category` (str), `colors` (list[str]), `style_tags` (list[str]) and `notes` (str). `items` may be an empty list.
@@ -90,7 +99,7 @@
 
 ### `create_fit_card`
 
-- **What it does:** Asks the model, through `generate()` with fixed rules passed as `system=`, for a caption someone would post about the find. The rules require it to read like a social post rather than a product description; to mention the item, its price (written as whole dollars, e.g. `$38`) and its platform exactly once each; to describe the vibe specifically, using the outfit and the item's style tags; and never to mention a brand when the listing's `brand` is `None`.
+- **What it does:** Asks the model, through `generate()` with fixed rules passed as `system=`, for a caption someone would post about the find. The rules require it to read like a social post rather than a product description; to mention the item, its price (written as whole dollars, e.g. `$38`) and its platform exactly once each; to describe the vibe specifically, using the outfit and the item's style tags; to use the last word of the item's name (e.g. `tee`) only inside that name, dropping it from any style tag that contains it; to write plain text with no hashtags, emoji or markdown; and never to mention a brand when the listing's `brand` is `None`.
 - **Inputs:**
   - `outfit` (`str`): the text `suggest_outfit` returned.
   - `new_item` (`dict`): the same listing dict that went into `suggest_outfit`.
@@ -199,15 +208,26 @@ Scored this gorgeous Y2K Baby Tee on depop for only $18. The white, pink, and pu
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* Claude to turn my `search_listings` decisions into the
+  four Tool Inventory lines.
+- *What came back:* a draft, plus a check that implemented it word for word. The
+  first wording let style words like "vintage" and "leather" earn title points,
+  which broke 4 test queries (`brown leather bag` returned a leather belt).
+- *What I changed:* title points are limited to words from `description`; then I
+  reviewed the lines.
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* to test my first `search_listings` design (filters on
+  style tags, colors, category, condition and price) on the starter's six
+  example queries before building it.
+- *What came back:* `silk slip dress in midi length under $40` returned 33
+  listings with Levi's jeans first, and `platform sneakers size 8` put US 7 Mary
+  Janes first, because garment words like "dress" matched no field and my design
+  had no size filter.
+- *What I changed:* I kept the starter's three inputs and added my fields as
+  extra ones, turned the size filter on, and matched leftover words against
+  listing titles. The slip dress and the US 8 sneakers then came first.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
