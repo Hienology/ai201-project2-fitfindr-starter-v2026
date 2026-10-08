@@ -216,6 +216,28 @@ def empty_search_message(query: str, parsed: dict) -> str:
     return " ".join(parts)
 
 
+def model_unavailable_message(item: dict, task: str, error: ModelUnavailable) -> str:
+    """
+    The student's pattern for a model that can't be reached: what broke, the
+    specific cause generate.py found, and what the user can do.
+    """
+    reason = str(error)
+    if "rejected your API key" in reason:
+        cause = "it rejected your API key"
+        fix = "checking GEMINI_API_KEY in your .env file, or creating a fresh key at aistudio.google.com, then trying again"
+    elif "did not resolve" in reason:
+        cause = f"the model name {config.MODEL!r} did not resolve"
+        fix = "putting AI201_MODEL in your .env back to its default, or asking in the help channel if you never changed it"
+    elif "internet connection" in reason:
+        cause = "the connection to it failed"
+        fix = "checking your internet connection and trying again"
+    else:
+        cause = f"of an unexpected error ({reason[:120]})"
+        fix = "trying again in a minute, and posting the full output in the help channel if it keeps happening"
+    return (f"Your issue is at the styling model: I found the {item['title']}, but couldn't reach the "
+            f"model to {task}, because {cause}. One way it can help is by {fix}.")
+
+
 # ── planning loop ─────────────────────────────────────────────────────────────
 
 def run_agent(query: str, wardrobe: dict) -> dict:
@@ -256,28 +278,57 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     count += 1
     trace.check_iterations(count)
     session["parsed"] = parse_query(session["query"])
+    trace.step("parse_query", inputs=session["query"], returned=_filled(session["parsed"]))
     session["search_results"] = call_tool("search_listings", session["parsed"])
 
     # Step 4, the branch: nothing found means stop here, with a message.
     if not session["search_results"]:
         session["error"] = empty_search_message(session["query"], session["parsed"])
+        trace.step("search_listings (via MCP)", inputs=_filled(session["parsed"]),
+                   returned=session["search_results"],
+                   note=f"branch: empty, stopping with error: {session['error']}")
         return session
 
     # Step 5: the best match.
     session["selected_item"] = session["search_results"][0]
+    item = session["selected_item"]
+    trace.step("search_listings (via MCP)", inputs=_filled(session["parsed"]),
+               returned=session["search_results"],
+               note=f"branch: found, selected_item = {item['id']} {item['title']}")
 
     # Step 6: outfit, from the item and wardrobe read back out of the session.
     count += 1
     trace.check_iterations(count)
     session["received_ids"]["suggest_outfit"] = session["selected_item"]["id"]
-    session["outfit_suggestion"] = suggest_outfit(session["selected_item"], session["wardrobe"])
+    handed = f"{item['id']} {item['title']} + wardrobe of {len(session['wardrobe']['items'])} items"
+    try:
+        session["outfit_suggestion"] = suggest_outfit(session["selected_item"], session["wardrobe"])
+    except ModelUnavailable as error:
+        session["error"] = model_unavailable_message(session["selected_item"], "suggest an outfit", error)
+        trace.step("suggest_outfit", inputs=handed, note=f"model unavailable, stopping: {error}")
+        return session
+    trace.step("suggest_outfit", inputs=handed, returned=session["outfit_suggestion"],
+               note=f"received_ids: {session['received_ids']}")
 
     # Step 7: fit card, from the outfit and the same item.
     count += 1
     trace.check_iterations(count)
     session["received_ids"]["create_fit_card"] = session["selected_item"]["id"]
-    session["fit_card"] = create_fit_card(session["outfit_suggestion"], session["selected_item"])
+    handed = f"outfit + {item['id']} {item['title']}"
+    try:
+        session["fit_card"] = create_fit_card(session["outfit_suggestion"], session["selected_item"])
+    except ModelUnavailable as error:
+        session["error"] = model_unavailable_message(session["selected_item"], "write the fit card", error)
+        trace.step("create_fit_card", inputs=handed, note=f"model unavailable, stopping: {error}")
+        return session
+    trace.step("create_fit_card", inputs=handed, returned=session["fit_card"],
+               note=f"received_ids: {session['received_ids']}")
     return session
+
+
+def _filled(parsed: dict) -> str:
+    """The parsed inputs that have a value, for the trace."""
+    return ", ".join(f"{k}={v!r}" for k, v in parsed.items() if v not in (None, "")) or "(nothing)"
 
 
 # ── running it directly ───────────────────────────────────────────────────────

@@ -146,6 +146,8 @@ change it.
 
 Steps 1 to 5 are deterministic (no randomness and no model call), so they produce the same session values on every try of the same query; only steps 6 and 7 call the model, so only they can differ between tries.
 
+If step 6 or 7 can't reach the model (`ModelUnavailable`, after the tool's one retry), `run_agent` puts a message in `session["error"]` in the same pattern as the empty-search message, naming the item it found, the step that failed, the specific cause and what to do (e.g. "…couldn't reach the model to suggest an outfit, because it rejected your API key. One way it can help is by checking GEMINI_API_KEY in your .env file…"), and returns the session; the later fields stay `None`.
+
 `trace.check_iterations(count)` is called on each pass, as the stop condition.
 
 ---
@@ -157,10 +159,25 @@ Steps 1 to 5 are deterministic (no randomness and no model call), so they produc
      1. One FULL query and its output, pasted as text.
      2. Your three per-tool terminal tests — the command and what it printed. -->
 
-**One full query**
+**One full query** (since unit 4, every run also prints its trace)
 
 ```
 $ python app.py ask 'vintage graphic tee under $30'
+[1] parse_query
+      in:  vintage graphic tee under $30
+      out: max_price=30.0, style_tags='vintage, graphic tee'
+[2] search_listings (via MCP)
+      in:  max_price=30.0, style_tags='vintage, graphic tee'
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Vintage Band Tee — Faded Grey, Graphic Tee — 2003 Tour Bootleg Style … +7 more
+      →    branch: found, selected_item = lst_002 Y2K Baby Tee — Butterfly Print
+[3] suggest_outfit
+      in:  lst_002 Y2K Baby Tee — Butterfly Print + wardrobe of 10 items
+      out: For a casual look, pair the Y2K Baby Tee — Butterfly Print with the baggy straight-leg jeans, dark wash and th…
+      →    received_ids: {'suggest_outfit': 'lst_002'}
+[4] create_fit_card
+      in:  outfit + lst_002 Y2K Baby Tee — Butterfly Print
+      out: Scored this cute Y2K Baby Tee on depop for only $18. Styled it for a casual look with baggy straight-leg jeans…
+      →    received_ids: {'suggest_outfit': 'lst_002', 'create_fit_card': 'lst_002'}
 
   Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
 
@@ -311,13 +328,35 @@ that produced it:
 **Happy path**
 
 ```
-
+$ python app.py ask 'vintage graphic tee under $30' --trace
+[1] parse_query
+      in:  vintage graphic tee under $30
+      out: max_price=30.0, style_tags='vintage, graphic tee'
+[2] search_listings (via MCP)
+      in:  max_price=30.0, style_tags='vintage, graphic tee'
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Vintage Band Tee — Faded Grey, Graphic Tee — 2003 Tour Bootleg Style … +7 more
+      →    branch: found, selected_item = lst_002 Y2K Baby Tee — Butterfly Print
+[3] suggest_outfit
+      in:  lst_002 Y2K Baby Tee — Butterfly Print + wardrobe of 10 items
+      out: For a casual look, pair the Y2K Baby Tee — Butterfly Print with the baggy straight-leg jeans, dark wash and th…
+      →    received_ids: {'suggest_outfit': 'lst_002'}
+[4] create_fit_card
+      in:  outfit + lst_002 Y2K Baby Tee — Butterfly Print
+      out: Scored this cute Y2K Baby Tee on depop for only $18. Styled it for a casual look with baggy straight-leg jeans…
+      →    received_ids: {'suggest_outfit': 'lst_002', 'create_fit_card': 'lst_002'}
 ```
 
 **Empty search**
 
 ```
-
+$ python app.py ask 'designer ballgown size XXS under $5' --trace
+[1] parse_query
+      in:  designer ballgown size XXS under $5
+      out: description='designer ballgown', size='xxs', max_price=5.0
+[2] search_listings (via MCP)
+      in:  description='designer ballgown', size='xxs', max_price=5.0
+      out: [] (empty)
+      →    branch: empty, stopping with error: Your issue is at the price: nothing matches under $5. One way it can help is by raising your price limit to at least $12. Your issue is at the size: nothing matches in size XXS. One way it can help is by trying size M, L or S/M. Your issue is at the words: nothing matches "designer ballgown". One way it can help is by trying other words, such as accessories, bottoms, outerwear, shoes or tops.
 ```
 
 **On the MCP move:** <!-- what changed in your code, and whether anything
