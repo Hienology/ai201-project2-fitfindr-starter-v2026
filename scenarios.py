@@ -53,6 +53,13 @@ SCENARIOS = [
         "wardrobe": "example",
         "criterion": 4,
     },
+    # Criterion 4, revised in unit 4: five more items, each picked by what
+    # could break a caption rule, none used while writing the prompt.
+    {"name": "fit card rules, item word in tags (lst_006)", "query": "bootleg graphic tee", "wardrobe": "example", "criterion": 4},
+    {"name": "fit card rules, item word in tags (lst_033)", "query": "faded band tee", "wardrobe": "example", "criterion": 4},
+    {"name": "fit card rules, two-word brand (lst_024)", "query": "polo shirt", "wardrobe": "example", "criterion": 4},
+    {"name": "fit card rules, hyphenated item word (lst_029)", "query": "silk button-down", "wardrobe": "example", "criterion": 4},
+    {"name": "fit card rules, plural item word (lst_020)", "query": "henley", "wardrobe": "example", "criterion": 4},
     # Criterion 5: the five impossible queries, one per kind. The message is
     # built without the model, so every try of one query is identical; the run
     # log reads one try per query.
