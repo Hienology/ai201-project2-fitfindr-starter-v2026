@@ -149,6 +149,40 @@ otherwise replay the same caption, and the tries need to be real.
 > only its shape changed, so this keeps the criterion measuring the model's
 > captions.
 
+> **Revised in unit 4 (more items):** Also run five more queries, five times
+> each with the cache off, each one reaching a different item:
+>
+> 1. `bootleg graphic tee` → `lst_006` Graphic Tee (the item word `tee` is
+>    inside two of its style tags)
+> 2. `faded band tee` → `lst_033` Vintage Band Tee (the same, two style tags)
+> 3. `polo shirt` → `lst_024` Vintage Polo Shirt (the item has a two-word
+>    brand, Ralph Lauren, which the caption may name)
+> 4. `silk button-down` → `lst_029` Silk Button-Down (the item word is
+>    hyphenated)
+> 5. `henley` → `lst_020` Henley Long Sleeve (the item word `sleeve` has a
+>    common plural)
+>
+> Each try is checked against the same rules as above, using that try's
+> `selected_item`, with the same re-run rule. The item word is counted as a
+> whole word, ignoring capitals, with its plural included (`sleeve` and
+> `sleeves` both count), and a hyphenated item word also counts when written
+> with a space or as one word (`button-down`, `button down`, `buttondown`).
+> Target: 5 of 5 counted tries pass for each item, 25 of 25 in all, and each
+> item's five fit cards all differ. The original check on
+> `vintage graphic tee under $30` stays as it is.
+>
+> **Why revised:** the original ran on one item, `lst_002` Y2K Baby Tee, the
+> item I fixed the fit-card prompt against in unit 3. Its item word `tee` also
+> sits in its style tag `graphic tee`, and the fix (the item-word line in the
+> prompt's rule 2) took that check from 0 of 3 to 3 of 3. So 5 of 5 on that
+> item mostly re-confirmed the fix on the case it was made for, which is not
+> what my reason says this criterion measures: whether the prompt rules make
+> the model obey the caption rules every time. The five items are picked by
+> what could break a rule, none of them were used while writing the prompt,
+> and the target stays 5 of 5 per item, so nothing is lowered. The before
+> run's captions still pass when the item word is counted this way; it is made
+> explicit because these items are where it matters.
+
 
 ---
 
