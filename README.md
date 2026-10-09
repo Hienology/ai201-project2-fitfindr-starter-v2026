@@ -264,19 +264,103 @@ Scored this gorgeous Y2K Baby Tee on depop for only $18. The white, pink, and pu
      `python run_eval.py --label before` runs everything and writes the table
      into results/. Paste it here and fill in the verdicts. -->
 
+From `results/run_2026-10-08_0037_before.md` (`python run_eval.py --label
+before`, 16 scenarios, 5 tries each, cache off, temperature 0.9). This is my
+second before run. The first, `results/run_2026-10-07_2229_before.md`, had only
+the original scenarios and met all five criteria, which showed criterion 4 was
+too easy (see Verdicts and Diagnoses). So I revised it in `criteria.md` before
+running again, adding five more items, and this run is the before for the
+improvement. Criterion 4 gets one row per item, because the revision has 25
+tries. Criterion 5's five try columns are its five queries, one try each,
+because the message is built without the model and is the same on every try.
+
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Matching query completes all three tools | at least 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. Impossible query stops before the second tool | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. State, found path (`vintage graphic tee under $30`) | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. State, stop path (`designer ballgown size XXS under $5`) | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card, original: `lst_002` Y2K Baby Tee | 5 of 5, all differ | PASS | PASS | PASS | PASS | PASS | MET (5/5, all differ) |
+| 4. Revised: `lst_006` Graphic Tee (`bootleg graphic tee`) | 5 of 5, all differ | PASS | PASS | PASS | PASS | PASS | 5/5 |
+| 4. Revised: `lst_033` Vintage Band Tee (`faded band tee`) | 5 of 5, all differ | PASS | PASS | PASS | PASS | PASS | 5/5 |
+| 4. Revised: `lst_024` Vintage Polo Shirt (`polo shirt`) | 5 of 5, all differ | PASS | PASS | PASS | PASS | FAIL | 4/5 |
+| 4. Revised: `lst_029` Silk Button-Down (`silk button-down`) | 5 of 5, all differ | PASS | PASS | PASS | PASS | PASS | 5/5 |
+| 4. Revised: `lst_020` Henley Long Sleeve (`henley`) | 5 of 5, all differ | PASS | PASS | PASS | PASS | PASS | 5/5 |
+| 4. Revised, all five items | 25 of 25 | | | | | | **MISSED (24/25)** |
+| 5. Empty-search message (price · size · words · size in combination · price, size and words) | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Real output from one try**, pasted as text, naming the file and function
-that produced it:
+**Real output, one try per criterion**, pasted as text from
+`results/run_2026-10-08_0037_before.md`. Every try was produced by
+`run_eval.py::main` calling `agent.py::run_agent`. The search goes through
+`mcp_client.call_tool` to `mcp_server.py::search_listings`, the fit card comes
+from `tools.py::create_fit_card`, and the empty-search message from
+`agent.py::empty_search_message`. Each excerpt is trimmed to the lines its
+criterion is judged on; the full tries, with outfits and traces, are in the log.
+
+Criterion 1, `matching query completes`, try 1:
 
 ```
+- stopped early: no
+- selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+- search_results: 10
 
+Fit card:
+Scored this amazing Y2K Baby Tee on depop for only $18. Pairing it with a baggy dark wash denim and a chunky brown belt gives off the ultimate nostalgic retro energy.
+```
+
+Criterion 2, `impossible query stops early`, try 1 (the trace ends after step
+2; there is no `suggest_outfit` step):
+
+```
+- stopped early: yes — Your issue is at the price: nothing matches under $5. One way it can help is by raising your price limit to at least $12. Your issue is at the size: nothing matches in size XXS. One way it can help is by trying size M, L or S/M. Your issue is at the words: nothing matches "designer ballgown". One way it can help is by trying other words, such as accessories, bottoms, outerwear, shoes or tops.
+- selected_item: (none)
+- search_results: 0
+
+[1] parse_query
+      in:  designer ballgown size XXS under $5
+      out: description='designer ballgown', size='xxs', max_price=5.0
+[2] search_listings (via MCP)
+      in:  description='designer ballgown', size='xxs', max_price=5.0
+      out: [] (empty)
+      →    branch: empty, stopping with error: Your issue is at the price: …
+```
+
+Criterion 3, `state, matching query`, try 1 (the found item's id at the branch,
+and the id each model tool was given):
+
+```
+[2] search_listings (via MCP)
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Vintage Band Tee — Faded Grey, Graphic Tee — 2003 Tour Bootleg Style … +7 more
+      →    branch: found, selected_item = lst_002 Y2K Baby Tee — Butterfly Print
+[3] suggest_outfit
+      in:  lst_002 Y2K Baby Tee — Butterfly Print + wardrobe of 10 items
+      →    received_ids: {'suggest_outfit': 'lst_002'}
+[4] create_fit_card
+      in:  outfit + lst_002 Y2K Baby Tee — Butterfly Print
+      →    received_ids: {'suggest_outfit': 'lst_002', 'create_fit_card': 'lst_002'}
+```
+
+Criterion 4, `fit card rules, two-word brand (lst_024)`, try 5, the miss:
+
+```
+- stopped early: no
+- selected_item: Vintage Polo Shirt — Forest Green ($18.0, thredUp)
+- search_results: 1
+
+Fit card:
+Scored this classic Ralph Lauren piece on thredUp for only $18. The vintage preppy earth tones vibe goes so well with my favorite baggy jeans and chunky sneakers for an everyday look.
+
+[4] create_fit_card
+      in:  outfit + lst_024 Vintage Polo Shirt — Forest Green
+      →    received_ids: {'suggest_outfit': 'lst_024', 'create_fit_card': 'lst_024'}
+```
+
+Criterion 5, `message: size in combination` (`platform sneakers size 9`), try 1:
+
+```
+- stopped early: yes — Your issue is at the size: nothing matches in size 9. One way it can help is by trying size US 8 or US 7.
+- selected_item: (none)
+- search_results: 0
 ```
 
 ---
@@ -299,15 +383,56 @@ that produced it:
      Look for a pattern. Three misses on the same tool is one problem, not
      three. -->
 
+Verdicts from the before run above, `results/run_2026-10-08_0037_before.md`.
+
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | A matching query completes all three tools | at least 4 of 5 | MET (5/5) | All five tries ran all three tools and returned a fit card. No try hit a model failure, so the one-miss allowance was not needed. |
+| 2 | An impossible query stops before the second tool | 5 of 5 | MET (5/5) | Every try stopped with 0 search results, the trace ends after step 2 with no `suggest_outfit` step, and the message names what to change. |
+| 3 | Every later step gets the item search found, or the run stops cleanly | 5 of 5 per query | MET (5/5, both paths) | Found path: in every try, the branch line's `selected_item` and both `received_ids` are `lst_002`. The run log prints the item's id, title, price and platform, not all 11 fields, so I judged the 11-field match by the id. `run_agent` sets `session["selected_item"] = session["search_results"][0]` (`agent.py:293`), the same dict, so a matching id means every field matches. Stop path: 0 results, an error message, no outfit or fit card, and no model step in the trace, so nothing was recorded in `received_ids`. |
+| 4 | The fit card follows its caption rules on every counted try (original: `lst_002`) | 5 of 5, all differ | MET (5/5) | All five captions have 2 to 4 sentences, `$18` once, `depop` once, `tee` once and no brand, and no two are the same. There were no fallback captions or crashes, so nothing was re-run. |
+| 4 | Revised in unit 4: the same rules on five more items | 5 of 5 per item, 25 of 25 | **MISSED (24/25)** | Four items went 5/5. The Polo Shirt went 4/5: try 5, "Scored this classic Ralph Lauren piece…", never names the item, so `shirt` appears 0 times and it fails the item-word rule. 4 of 5 against 5 of 5 is a miss. |
+| 5 | The empty-search message names what blocked the search and how to fix it | 5 of 5 | MET (5/5) | For every blocking part of all five queries, the message names the part (`price`, `size`, `words`), quotes my value, and gives a fix from the data. Each message was identical on all five tries and in the first before run. |
+
+**The first run, and why criterion 4 was revised.** My first before run
+(`results/run_2026-10-07_2229_before.md`) met all five criteria. Criteria 2, 3
+and 5 test steps that do not vary, so 5 of 5 is what a working build should get.
+But criterion 4 was low. It ran on one item, `lst_002`, the item I had fixed the
+fit-card prompt against in unit 3 (its item word `tee` is also in its style tag
+`graphic tee`). So 5 of 5 mostly re-confirmed that fix. I first considered
+tightening "all five differ", since 18 of 20 captions opened with "Scored this".
+I decided against it: the rest of each caption varied, and that clause is there
+to prove the tries are real, not to grade style. So I revised criterion 4
+underneath the original to cover five items picked by what could break a rule,
+kept the target at 5 of 5 per item, and committed it before running them.
 
 **Diagnoses**
+
+**Criterion 4 (revised), 24/25.**
+
+- *Where:* the model's output in `tools.py::create_fit_card`, step 7 of my
+  session flow. It is not the tool's code, the branch or the session: the trace
+  shows `create_fit_card` received `lst_024`, and the caption has the right
+  price and platform.
+- *Mechanism:* for a listing with a brand, the prompt gives both
+  `Brand: Ralph Lauren` (from `_item_details`, only when `brand` is not `None`)
+  and `Name to use for the item: Vintage Polo Shirt`. Rule 6 allows naming the
+  brand. Rule 2 says to mention the item using the name given, but the model
+  treated "the Ralph Lauren piece" as that mention, so the name never appeared.
+  My brand safeguard only replaces captions that name a *different* brand, so
+  nothing caught it.
+- *Pattern:* it is one problem, and the name only went missing on items with a
+  brand.
+
+| Captions in both before logs | Captions | Opening says "piece"/"find" where the name goes | Item never named |
+|---|---|---|---|
+| Items with a brand (`lst_024` Polo Shirt; `lst_007` Wrangler Denim Jacket in each run's empty-wardrobe scenario) | 15 | 6 (5 of them with the brand) | 3 |
+| Items without a brand | 50 | 1 (Henley try 5, which names the item later) | 0 |
+
+  Two of the three captions that never name the item are the Wrangler jacket's,
+  in the empty-wardrobe scenario. That scenario is not part of criterion 4, so
+  they don't count toward the verdict, but they show the Polo Shirt was not a
+  one-off.
 
 
 
@@ -384,21 +509,93 @@ still call `tools.all_matches` directly, not through MCP.
 
      `python run_eval.py --label after` -->
 
-**What I changed:**
+**What I changed:** one sentence added to rule 2 of the fit-card prompt
+(`FIT_CARD_RULES` in `tools.py`, commit `d68bbac`):
 
-**Which failure it was meant to fix:**
+```
+2. Mention the item exactly once, using the name given. If a brand is given, it
+   may go right before that name, never in place of it: a caption that names the
+   brand must still contain the name. The item word given below may appear only
+   inside that name: ...
+```
+
+The docstring and the Tool Inventory say the same. The new sentence names no
+listing from the data, so it is not fitted to the Polo Shirt. Nothing else in
+the system changed.
+
+**Which failure it was meant to fix:** the revised criterion 4 miss on
+`lst_024`, where the brand took the name's place ("the Ralph Lauren piece") and
+the item was never named.
 
 ### Run Log — After
 
+From `results/run_2026-10-08_0104_after.md` (`python run_eval.py --label
+after`): the same 16 scenarios, 5 tries each, cache off, and the same rows as
+the before table.
+
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Matching query completes all three tools | at least 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. Impossible query stops before the second tool | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. State, found path (`vintage graphic tee under $30`) | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. State, stop path (`designer ballgown size XXS under $5`) | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card, original: `lst_002` Y2K Baby Tee | 5 of 5, all differ | PASS | PASS | PASS | PASS | PASS | MET (5/5, all differ) |
+| 4. Revised: `lst_006` Graphic Tee (`bootleg graphic tee`) | 5 of 5, all differ | PASS | PASS | PASS | PASS | PASS | 5/5 |
+| 4. Revised: `lst_033` Vintage Band Tee (`faded band tee`) | 5 of 5, all differ | PASS | PASS | FAIL | PASS | PASS | 4/5 |
+| 4. Revised: `lst_024` Vintage Polo Shirt (`polo shirt`) | 5 of 5, all differ | PASS | PASS | PASS | PASS | PASS | 5/5 |
+| 4. Revised: `lst_029` Silk Button-Down (`silk button-down`) | 5 of 5, all differ | PASS | PASS | PASS | PASS | PASS | 5/5 |
+| 4. Revised: `lst_020` Henley Long Sleeve (`henley`) | 5 of 5, all differ | PASS | PASS | PASS | PASS | PASS | 5/5 |
+| 4. Revised, all five items | 25 of 25 | | | | | | **MISSED (24/25)** |
+| 5. Empty-search message (price · size · words · size in combination · price, size and words) | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Did it help, and how do I know:**
+The miss, `fit card rules, item word in tags (lst_033)`, try 3:
+
+```
+- stopped early: no
+- selected_item: Vintage Band Tee — Faded Grey ($19.0, depop)
+- search_results: 5
+
+Fit card:
+Scored this Vintage Band Tee for just $19 on depop. The vintage grunge streetwear vibe looks so sick tucked into wide-leg khaki trousers with chunky white sneakers and a brown leather belt. Can not wait to style this graphic tee with baggy straight-leg jeans and black combat boots for the ultimate dark wash fit.
+```
+
+**Did it help, and how do I know:** it fixed the failure it was aimed at, but
+the criterion is still missed, 24/25, now on a different item.
+
+| Measure | Before | After |
+|---|---|---|
+| Criterion 4 revised, Polo Shirt | 4/5 | **5/5** |
+| Branded captions where the brand takes the name's place | 4 of 10 | **0 of 10** |
+| Branded captions that never name the item | 3 of 10 | 1 of 10 |
+| Criterion 4 revised, all five items | 24/25, MISSED | 24/25, MISSED |
+| Criteria 1, 2, 3, 5 and criterion 4's original | all MET | all MET, unchanged |
+
+(The branded captions are the Polo Shirt's five plus the Wrangler jacket's five
+in the empty-wardrobe scenario.)
+
+- **The targeted failure is gone.** 4 of the 5 Polo Shirt captions now write
+  "Ralph Lauren Vintage Polo Shirt", the brand right before the name, which is
+  what the new sentence allows. Across both before logs the brand took the
+  name's place in 5 of 15 branded captions. If my change did nothing, 0 of 10
+  would happen by luck less than 1 time in 50 ((10/15)^10 ≈ 0.017), so I read
+  this as a real effect.
+- **One branded caption still never names the item:** the Wrangler jacket's
+  try 2, "Scored this amazing piece on poshmark for only $42", names neither the
+  brand nor the item. The new sentence only applies when the brand is named, so
+  it does not cover this shape. It is in the empty-wardrobe scenario, not
+  criterion 4.
+- **The new miss is a different failure.** The Band Tee's try 3 uses its style
+  tag `graphic tee` ("style this graphic tee"), so `tee` appears twice. That is
+  the tag problem I fixed in unit 3 coming back. It also happened once outside
+  criterion 4: "vintage graphic tee energy" in try 4 of `state, matching query`,
+  which criterion 3 doesn't judge on its caption. Across all captions, the tag
+  repeat went from 0 of 65 in both before logs to 2 of 45 after.
+- **I can't tell whether my change caused it.** If the rate had not changed,
+  there is about a 1 in 6 chance both repeats would land in the after run
+  ((45 × 44) / (110 × 109) ≈ 0.17), so two cases can't separate a regression
+  from chance. A possible cause is that rule 2 is longer now, and the
+  instruction to drop the item word from style tags comes after the new brand
+  sentence.
 
 <!-- If it made things worse, say that. Honestly reported, that earns full
      credit and is more interesting than one that worked. -->
@@ -412,6 +609,100 @@ still call `tools.all_matches` directly, not through MCP.
 <!-- For each criterion still missed: what you'd do, and why you stopped where
      you did. "I ran out of time" is fine if it's true. Pretending nothing is
      left is not. -->
+
+One criterion is still missed: criterion 4 (revised), problem 1 below. The
+other three are problems I found along the way that none of my criteria
+measure.
+
+**1. The style tag repeats the item word (criterion 4 revised, 24/25 after the
+improvement).**
+
+- *What happened:* in the after run, the Band Tee's try 3 says "style this
+  graphic tee", so `tee` appears twice and the try fails. The same thing
+  happened in try 4 of `state, matching query` ("vintage graphic tee energy"):
+  2 of 45 captions after, 0 of 65 in both before logs.
+- *Where and why:* the model's output in `tools.py::create_fit_card`.
+  `_item_details` puts every style tag in the prompt (`Style tags: vintage,
+  grunge, band tee, graphic tee, streetwear`), and rule 2 then asks the model to
+  drop the item word from them. So the code hands the model the exact words it
+  is told not to use, and depends on the model obeying every time.
+- *What I'd do:* remove the item word from the tags in code before building the
+  prompt (`graphic tee` becomes `graphic`, `band tee` becomes `band`), so the
+  model never sees `tee` outside the name. That turns a rule the model can break
+  into one it can't. Then run the same 16 scenarios again and compare the tag
+  repeats with 2 of 45.
+- *Why I stopped:* the unit allows one improvement, and I had used it on the
+  brand rule. A second change in the same after run would make it impossible to
+  tell which change did what. It could have been the stretch "a second
+  improvement measured the same way", but I did not declare a stretch.
+
+**2. A caption can call the item just "piece" and never name it.**
+
+- *What happened:* in the after run, try 2 of the empty-wardrobe scenario
+  (`lst_007`, Wrangler Denim Jacket) reads: "Scored this amazing piece on
+  poshmark for only $42. The light blue wash and cropped silhouette give off
+  such a cool vintage vibe. It is going to look so good layered over flowy midi
+  dresses for weekend errands." It names neither the brand nor the jacket.
+- *Where and why:* the model's output in `tools.py::create_fit_card`. Rule 2
+  asks for the name, and my new sentence only covers captions that name the
+  brand. In code, `create_fit_card` only checks for an empty reply and for
+  other brands, never that the name is there.
+- *What I'd do:* check the reply in code. If the caption doesn't contain the
+  item's name, retry once, then return the fallback caption, which always names
+  it. Criterion 4 re-runs fallback captions without counting them, so I would
+  also count how often the check fires. Otherwise it would hide the model's
+  misses instead of showing them.
+- *Why I stopped:* the same one-improvement rule. It is also in the
+  empty-wardrobe scenario, which is not one of my five criteria, so it was not
+  the miss my diagnosis pointed at.
+
+**3. A dropped connection hangs the agent instead of reaching my
+model-unavailable handler.**
+
+- *What happened:* during my second before run I closed my laptop. The macOS
+  sleep log shows "Clamshell Sleep" at 23:25:21, and the run's last output was
+  at 23:25:22, inside `create_fit_card` for the Polo Shirt's try 5. At 00:29 the
+  process was still waiting, with its connection to Google still listed as
+  open. There was no error and no message. `run_eval.py` writes its log only at
+  the end, so that run's results were lost, and I re-ran it with the laptop
+  kept awake.
+- *Where and why:* `generate.py::_get_client` creates the client with
+  `genai.Client(api_key=key)` and no timeout, so a read on a dead connection
+  waits forever. My handler in `run_agent` only runs when `generate()` raises,
+  and it never raised.
+- *What I'd do:* give the client a timeout through its HTTP options.
+  `generate.py` already turns an error that mentions "timeout" into "Couldn't
+  reach the model. Check your internet connection" (`generate.py:218`), and my
+  handler maps that to its own message. So a timeout would reach the user as
+  "Your issue is at the styling model…" instead of a silent hang.
+- *Why I stopped:* `generate.py` is a starter file, not part of my system, and
+  the only changes allowed this unit are the MCP move and one improvement. It
+  is also not a criterion miss.
+
+**4. Searching by brand finds nothing, and the message blames the words.**
+
+- *What happened:* `ralph lauren polo` returns `[]`, even though a Ralph Lauren
+  polo (`lst_024`) is in the data, and the message says: "Your issue is at the
+  words: nothing matches "ralph lauren polo". One way it can help is by trying
+  other words, such as accessories, bottoms, outerwear, shoes or tops." I tried
+  the brand plus the item word for every listing with a brand, and 5 of the 8
+  return nothing (`woolrich shirt`, `champion jacket`, `wrangler jacket`,
+  `demonia janes`, `ralph lauren shirt`).
+- *Where and why:* `tools.py::search_listings` scores query words against style
+  tags, colors, category, condition, title and description, but not `brand`.
+  So a brand word only counts when it is also written in the title or
+  description, which is true for 2 of the 8 branded listings (both Levi's).
+  Then the coverage cutoff removes the listing: in `ralph lauren polo` only
+  `polo` matches, 1 of 3 words, below my more-than-half rule.
+  `empty_search_message` only knows prices, sizes and words, so it blames the
+  words and suggests category names, which doesn't help.
+- *What I'd do:* score `brand` like a style tag (a point for each matching
+  word, plus the exact-value bonus for the whole brand), let
+  `empty_search_message` say when a brand matches nothing, and re-run my search
+  checks so nothing else changes.
+- *Why I stopped:* no criterion covers brand search, so no run measured it. I
+  only found it while choosing queries for the criterion 4 revision, and fixing
+  it would be a second change to the system this unit.
 
 
 
