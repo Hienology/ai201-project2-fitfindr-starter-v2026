@@ -246,6 +246,38 @@ Scored this gorgeous Y2K Baby Tee on depop for only $18. The white, pink, and pu
   extra ones, turned the size filter on, and matched leftover words against
   listing titles. The slip dress and the US 8 sneakers then came first.
 
+**Moment 3 (unit 4)**
+
+- *What I asked for:* Claude to check my first before run against my criteria
+  and tell me which target, if any, was too easy.
+- *What came back:* all five criteria met. Claude pointed out that 18 of 20 fit
+  cards opened with "Scored this" and suggested tightening criterion 4 to "at
+  most 2 of the 5 captions open with the same first two words". It also
+  corrected one of its own earlier claims along the way: "no two share an
+  opening sentence" would still have passed.
+- *What I changed:* I pushed back, because the captions diverge after the
+  opening. Re-reading my own reason for criterion 4 showed that "all five
+  differ" is there to prove the tries are real (cache off), not to grade style,
+  so I dropped the openings idea. I tightened what criterion 4 tests instead: it
+  had only ever run on `lst_002`, the item I fixed the prompt against in unit 3.
+  I revised it to cover five items picked by what could break a rule. That run
+  caught a real miss (the Polo Shirt's brand taking the name's place), which
+  became my improvement.
+
+**Moment 4 (unit 4)**
+
+- *What I asked for:* to check on my second before run, which had stopped
+  printing.
+- *What came back:* the process had been waiting for over an hour on one model
+  call in `create_fit_card`. The macOS sleep log showed I had closed my laptop
+  one second before the last output. And `generate.py` creates the model client
+  with no timeout, so the dead connection never raised an error and my
+  model-unavailable handler never ran.
+- *What I changed:* I re-ran the test with the laptop kept awake. I wrote the
+  missing timeout up as problem 3 in What's Still Broken rather than editing
+  `generate.py`: it is a starter file, and this unit allows only the MCP move
+  and one improvement.
+
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
      Don't fill these in during unit 3.
