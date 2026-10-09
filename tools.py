@@ -331,7 +331,7 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
 FIT_CARD_RULES = """You write a short caption someone would post about a second-hand find.
 Rules:
 1. Write two to four sentences that read like a social media post, not a product description.
-2. Mention the item exactly once, using the name given. The item word given below may appear only inside that name: do not use it anywhere else, not even inside a style tag; drop it from any tag that contains it.
+2. Mention the item exactly once, using the name given. If a brand is given, it may go right before that name, never in place of it: a caption that names the brand must still contain the name. The item word given below may appear only inside that name: do not use it anywhere else, not even inside a style tag; drop it from any tag that contains it.
 3. Write the price exactly once, exactly as given (for example $38).
 4. Name the platform exactly once, exactly as given.
 5. Describe the vibe specifically, using the outfit and the item's style tags.
@@ -362,7 +362,8 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     The model is told to write two to four sentences that read like a post,
     mention the item, its price (as whole dollars, e.g. "$38") and its platform
     exactly once each, describe the vibe from the outfit and the style tags,
-    and name no brand unless the listing has one.
+    and name no brand unless the listing has one, and then only right before
+    the item's name, never in place of it.
 
     Args:
         outfit:   the outfit text suggest_outfit() returned.

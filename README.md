@@ -99,7 +99,7 @@ change it.
 
 ### `create_fit_card`
 
-- **What it does:** Asks the model, through `generate()` with fixed rules passed as `system=`, for a caption someone would post about the find. The rules require it to read like a social post rather than a product description; to mention the item, its price (written as whole dollars, e.g. `$38`) and its platform exactly once each; to describe the vibe specifically, using the outfit and the item's style tags; to use the last word of the item's name (e.g. `tee`) only inside that name, dropping it from any style tag that contains it; to write plain text with no hashtags, emoji or markdown; and never to mention a brand when the listing's `brand` is `None`.
+- **What it does:** Asks the model, through `generate()` with fixed rules passed as `system=`, for a caption someone would post about the find. The rules require it to read like a social post rather than a product description; to mention the item, its price (written as whole dollars, e.g. `$38`) and its platform exactly once each; to describe the vibe specifically, using the outfit and the item's style tags; to use the last word of the item's name (e.g. `tee`) only inside that name, dropping it from any style tag that contains it; to write plain text with no hashtags, emoji or markdown; never to mention a brand when the listing's `brand` is `None`; and, when it has a brand, to put the brand only right before the item's name, never in place of it.
 - **Inputs:**
   - `outfit` (`str`): the text `suggest_outfit` returned.
   - `new_item` (`dict`): the same listing dict that went into `suggest_outfit`.
